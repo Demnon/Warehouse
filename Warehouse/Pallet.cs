@@ -6,20 +6,20 @@ using System.Threading.Tasks;
 
 namespace Warehouse
 {
-    // Паллета
+    // Палета
     public class Pallet : Container
     {
         // Список коробок
-        List<Box> b_Boxes;
+        private List<Box> b_Boxes;
         // Срок годности (количество оставшихся дней)
-        int i_ShelfLife;
+        private int i_ShelfLife;
 
         public Pallet(string s_Name, double d_Width, double d_Height, double d_Depth)
            : base(s_Name, d_Width, d_Height, d_Depth, 0)
         {
             b_Boxes = new List<Box>();
             i_ShelfLife = 0;
-            d_Weight = 30;
+            this.d_Weight = 30;
         }
 
         // Свойства
@@ -38,84 +38,77 @@ namespace Warehouse
             get { return d_Weight; }
         }
 
-        // Добавление коробок в паллету c указанным сроком годности
-        // Аргументы: 1 - количество коробок, остальные аргументы для создания коробки с указанным сроком годности
-        public void AddBoxes(int i_Count,string s_Name, double d_Width, double d_Height, double d_Depth, double d_Weight, int i_ShelfLife)
+        // Добавление коробок в палету
+        public void AddBoxes(object[,] o_Information)
         {
-            // Создание экземпляров коробок и добавление в список, а также пересчет срока годности паллеты
-            for (int i=0;i<i_Count;i++)
+            // Создание экземпляров коробок и добавление в список, а также пересчет срока годности палеты
+            for (int i=0;i<o_Information.GetUpperBound(0)+1;i++)
             {
-                Box b_Box = new Box(s_Name, d_Width, d_Height, d_Depth, d_Weight, i_ShelfLife);
+                // В зависимости от типа последнего параметра вызываем соответствующий конструктор
+                Box b_Box = o_Information[i, 5].GetType().Name == "DateTime" ?
+                    new Box((string)o_Information[i, 0], (double)o_Information[i, 1], (double)o_Information[i, 2],
+                        (double)o_Information[i, 3], (double)o_Information[i, 4], (DateTime)o_Information[i, 5]):
+                        new Box((string)o_Information[i, 0], (double)o_Information[i, 1], (double)o_Information[i, 2],
+                        (double)o_Information[i, 3], (double)o_Information[i, 4], (int)o_Information[i, 5]);
+                
                 b_Boxes.Add(b_Box);
 
-                // Если срок годности добавляемой коробки меньше, то присваиваем его паллете
-                if (b_Box.GetShelfLife < this.i_ShelfLife)
+                // Если коробка одна, то ее срок годности - срок годности палеты
+                if (b_Boxes.Count == 1)
                 {
-                    this.i_ShelfLife = b_Box.GetShelfLife;
+                    i_ShelfLife = b_Box.GetShelfLife;
+                }
+                // Если срок годности добавляемой коробки меньше, то присваиваем его палете
+                if (b_Box.GetShelfLife < i_ShelfLife)
+                {
+                    i_ShelfLife = b_Box.GetShelfLife;
                 }
 
                 // Увеличиваем вес паллеты
-                d_Weight += d_Weight;
+                d_Weight += b_Box.GetSetWeight;
             }
         }
 
-        // Добавление коробок в паллету c указанным сроком годности
-        // Аргументы: 1 - количество коробок, остальные аргументы для создания коробки с указанной датой производства
-        public void AddBoxes(int i_Count, string s_Name, double d_Width, double d_Height, double d_Depth, double d_Weight, DateTime d_ProductionDate)
+        // Удалить заданные коробки из палеты по id
+        public void DeleteBoxes(Guid[] g_Ids)
         {
-            // Создание экземпляров коробок и добавление в список, а также пересчет срока годности паллеты
-            for (int i = 0; i < i_Count; i++)
+            // Формирование массива удаляемых коробок (проверка всех id на наличие)
+            Box[] b_FindBoxes = new Box[g_Ids.Length];
+            for (int i = 0; i < g_Ids.Length; i++)
             {
-                Box b_Box = new Box(s_Name, d_Width, d_Height, d_Depth, d_Weight, d_ProductionDate);
-                b_Boxes.Add(b_Box);
-
-                // Если срок годности добавляемой коробки меньше, то присваиваем его паллете
-                if (b_Box.GetShelfLife < this.i_ShelfLife)
+                b_FindBoxes[i] = b_Boxes.Find(x => x.GetId == g_Ids[i]);
+                if (b_FindBoxes[i] == null)
                 {
-                    this.i_ShelfLife = b_Box.GetShelfLife;
+                    throw new ApplicationException("Коробка с указанным id не найдена!");
                 }
-
-                // Увеличиваем вес паллеты
-                d_Weight += d_Weight;
             }
-        }
-
-        // Удалить коробку из палеты по id
-        public void DeleteBox(Guid g_Id)
-        {
-            Box b_Box = b_Boxes.Find(x => x.GetId == g_Id);
-            if (b_Box!=null)
+            // Удаление
+            for (int i = 0; i < b_FindBoxes.Length; i++)
             {
-                // Уменьшаем вес паллеты
-                d_Weight -= b_Box.GetSetWeight;
+                // Уменьшаем вес палеты
+                d_Weight -= b_FindBoxes[i].GetSetWeight;
 
                 // Удаление
-                b_Boxes.Remove(b_Box);
-
-                // Если больше нет коробки с таким сроком годности, то пересчитываем срок годности паллеты
-                b_Box = b_Boxes.Find(x => x.GetShelfLife == this.i_ShelfLife);
-                if (b_Box == null)
+                b_Boxes.Remove(b_FindBoxes[i]);
+            }
+            // После удаления находим коробку с минимальным сроком годности
+            int i_Help = 0;
+            for (int i = 0; i < b_Boxes.Count; i++)
+            {
+                if (i == 0)
                 {
-                    // Находим коробку с минимальным сроком годности
-                    int i_Help = 0;
-                    for (int i=0;i<b_Boxes.Count;i++)
-                    {
-                        if (i == 0)
-                        {
-                            i_Help = b_Boxes[0].GetShelfLife;
-                        }
-                        if (i_Help<b_Boxes[i].GetShelfLife)
-                        {
-                            i_Help = b_Boxes[i].GetShelfLife;
-                        }
-                    }
-                    // Присваиваем сроку годности паллеты
-                    this.i_ShelfLife = i_Help;
+                    i_Help = b_Boxes[0].GetShelfLife;
+                }
+                if (i_Help < b_Boxes[i].GetShelfLife)
+                {
+                    i_Help = b_Boxes[i].GetShelfLife;
                 }
             }
+            // Присваиваем сроку годности палеты
+            i_ShelfLife = i_Help;
         }
 
-        // Вычисление объема паллеты
+        // Вычисление объема палеты
         public override double GetVolume()
         {
             // Вычисляем сумму всех объемов коробок

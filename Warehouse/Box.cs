@@ -10,9 +10,9 @@ namespace Warehouse
     public class Box : Container
     {
         // Срок годности (количество оставшихся дней)
-        int i_ShelfLife;
+        private int i_ShelfLife;
         // Дата производства (формат: дд.мм.гггг)
-        DateTime d_ProductionDate;
+        private DateTime d_ProductionDate;
 
         // Конструктор для задания срока годности
         public Box(string s_Name, double d_Width, double d_Height, double d_Depth, double d_Weight, int i_ShelfLife) 
@@ -26,11 +26,9 @@ namespace Warehouse
         public Box(string s_Name, double d_Width, double d_Height, double d_Depth, double d_Weight, DateTime d_ProductionDate)
             : base(s_Name, d_Width, d_Height, d_Depth, d_Weight)
         {
-
             this.d_ProductionDate = d_ProductionDate;
             // Если дата производства, то вычисляем срок годности + 100 дн
-            i_ShelfLife = (DateTime.Now - d_ProductionDate).Days;
-
+            i_ShelfLife = (DateTime.Now - d_ProductionDate).Days + 100;
         }
 
         // Свойства

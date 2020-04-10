@@ -10,94 +10,91 @@ namespace Warehouse
     // Склад, содержащий список паллет
     public class Warehouse
     {
-        List<Pallet> p_Pallets;
+        // Имя склада
+        private string s_Name;
+        // Список палет склада
+        private List<Pallet> p_Pallets;
 
-        public Warehouse()
+        public Warehouse(string s_Name)
         {
+            this.s_Name = s_Name;
             p_Pallets = new List<Pallet>();
         }
 
-        // Добавление паллеты на склад
-        // Аргументы: 1 - количество паллет, остальные аргументы для создания паллеты 
-        public void AddPallet(int i_Count, string s_Name, double d_Width, double d_Height, double d_Depth)
+        public string GetSetName
         {
-            for (int i = 0; i < i_Count; i++)
+            get { return s_Name; }
+            set { s_Name = value; }
+        }
+        public List<Pallet> GetPallets
+        {
+            get { return p_Pallets; }
+        }
+
+        // Добавление палет на склад
+        public void AddPallets(object[,] o_Information)
+        {
+            for (int i = 0; i < o_Information.GetUpperBound(0)+1; i++)
             {
-                Pallet p_Pallet = new Pallet(s_Name, d_Width, d_Height, d_Depth);
+                Pallet p_Pallet = new Pallet((string)o_Information[i,0], (double)o_Information[i, 1], (double)o_Information[i, 2],
+                    (double)o_Information[i, 3]);
                 p_Pallets.Add(p_Pallet);
             }
         }
 
-        // Добавить коробку в паллету (срок годности)     
-        public void AddBoxInPallet(int i_Count,Guid g_Id, string s_Name, double d_Width, double d_Height, double d_Depth,double d_Weight, int i_ShelfLife)
+        // Удаление палет со склада по id
+        public void DeletePallets(Guid[] g_Ids)
         {
-            Pallet p_Pallet = p_Pallets.Find(x => x.GetId == g_Id);
-            p_Pallet.AddBoxes(i_Count,s_Name, d_Width, d_Height, d_Depth,d_Weight,i_ShelfLife);
+            // Формирование массива удаляемых палет(проверка всех id на наличие)
+            int[] i_FindPallets = new int[g_Ids.Length];
+            for (int i = 0; i < g_Ids.Length; i++)
+            {
+                i_FindPallets[i] = p_Pallets.FindIndex(x => x.GetId == g_Ids[i]);
+                if (i_FindPallets[i] == -1)
+                {
+                    throw new ApplicationException("Палета с указанным id не найдена!");
+                }
+            }
+            // Удаление
+            for (int i = 0; i < i_FindPallets.Length; i++)
+            {
+                // Удаление коробок
+                Guid[] g_IdsBoxes = new Guid[p_Pallets[i_FindPallets[i]].GetBoxes.Count];
+                for (int j=0;j<p_Pallets[i_FindPallets[i]].GetBoxes.Count;j++)
+                {
+                    g_IdsBoxes[j] = p_Pallets[i_FindPallets[i]].GetBoxes[j].GetId;
+                }
+                p_Pallets[i_FindPallets[i]].DeleteBoxes(g_IdsBoxes);
+                // Удаление
+                p_Pallets.RemoveAt(i_FindPallets[i]);
+            }
         }
 
-        // Добавить коробку в паллету (дата производства)
-
-        public void AddBoxInPallet(int i_Count, Guid g_Id, string s_Name, double d_Width, double d_Height, double d_Depth, double d_Weight, DateTime d_ProductionDate)
+        // Добавить коробки в паллету  
+        public void AddBoxesInPallet(Guid g_Id, object[,] o_Information)
         {
             Pallet p_Pallet = p_Pallets.Find(x => x.GetId == g_Id);
             if (p_Pallet != null)
             {
-                p_Pallet.AddBoxes(i_Count, s_Name, d_Width, d_Height, d_Depth, d_Weight, d_ProductionDate);
+                p_Pallet.AddBoxes(o_Information);
+            }
+            else
+            {
+                throw new ApplicationException("Палета с указанным id не найдена!");
             }
         }
 
-        // Удаление паллеты со склада по id
-        public void DeletePallet(Guid g_Id)
+        // Удалить заданные коробки у палеты
+        public void DeleteBoxesInPallet(Guid g_Id, Guid[] g_Ids)
         {
             Pallet p_Pallet = p_Pallets.Find(x => x.GetId == g_Id);
             if (p_Pallet != null)
             {
-                // Удаление коробок у паллеты
-                for (int i = 0; i < p_Pallet.GetBoxes.Count; i++)
-                {
-                    p_Pallet.DeleteBox(p_Pallet.GetBoxes[i].GetId);
-                }
-                // Удаление паллеты
-                p_Pallets.Remove(p_Pallet);
+                p_Pallet.DeleteBoxes(g_Ids);
             }
-        }
-
-        // Группировка паллет по сроку годности, сортировка групп по возрастанию срока годности,
-        // в группе сортировка паллет по весу (не успел реализовать), вывод на экран
-        public void GroupPallets()
-        {
-            Console.WriteLine("Паллеты после группировки:");
-            //IOrderedEnumerable<IGrouping<int, Pallet>>
-            // Группировка по сроку годности
-            var Groups = from p_Pallet in p_Pallets group p_Pallet by p_Pallet.GetShelfLife into newGroup
-                         orderby newGroup.Key
-                         select newGroup;
-            foreach (var ShelfLifeGroup in Groups)
+            else
             {
-                foreach (var p_Pallet in ShelfLifeGroup)
-                {
-                    Console.WriteLine(p_Pallet.GetId + " " + p_Pallet.GetSetName + " " + p_Pallet.GetSetWidth + " " +
-                        p_Pallet.GetSetHeight + " " + p_Pallet.GetSetDepth + " " + p_Pallet.GetSetWeight + " " +
-                        p_Pallet.GetShelfLife + " ");
-                }
-            }
-        }
-
-        // Вывод содержимого
-        public void Output()
-        {
-           for (int i=0;i<p_Pallets.Count;i++)
-            {
-                Console.WriteLine("Паллета: {0}, {1}, {2}, {3}, {4}, {5}, {6}", p_Pallets[i].GetId, p_Pallets[i].GetSetName, p_Pallets[i].GetSetWidth,
-                    p_Pallets[i].GetSetHeight, p_Pallets[i].GetSetDepth, p_Pallets[i].GetSetWeight, p_Pallets[i].GetShelfLife);
-                Console.WriteLine("Коробки:");
-                for (int j=0;j<p_Pallets[i].GetBoxes.Count;j++)
-                {
-                    Console.WriteLine("{0}, {1}, {2}, {3}, {4}, {5}, {6}", p_Pallets[i].GetBoxes[j].GetId,
-                        p_Pallets[i].GetBoxes[j].GetSetName, p_Pallets[i].GetBoxes[j].GetSetWidth,
-                    p_Pallets[i].GetBoxes[j].GetSetHeight, p_Pallets[i].GetBoxes[j].GetSetDepth, p_Pallets[i].GetBoxes[j].GetSetWeight,
-                    p_Pallets[i].GetBoxes[j].GetShelfLife, p_Pallets[i].GetBoxes[j].GetProductionDate.ToShortDateString());
-                }
+                throw new ApplicationException("Паллета с указанным id не найдена!");
             }
         }
     }
