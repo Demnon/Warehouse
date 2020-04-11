@@ -46,6 +46,7 @@
     <Compile Include="Box.cs" />
     <Compile Include="Container.cs" />
     <Compile Include="GetSetInfoFromFile.cs" />
+    <Compile Include="Menu.cs" />
     <Compile Include="OutputInfo.cs" />
     <Compile Include="Pallet.cs" />
     <Compile Include="Program.cs" />

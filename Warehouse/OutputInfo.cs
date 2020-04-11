@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Warehouse
 {
@@ -105,8 +103,12 @@ namespace Warehouse
         //с наибольшим сроком годности, отсортированные по возрастанию объема
         public static void OutputTreePallets(List<Pallet> p_Pallets)
         {
-            List<Pallet> p_SortPallets = p_Pallets.OrderBy(x => x.GetBoxes[x.GetBoxes.FindIndex(y => y == x.GetBoxes.OrderBy(z => z.GetShelfLife).First())]).ToList();
-            for (int i=0;i<3;i++)
+            List<Pallet> p_SortPallets = p_Pallets.OrderByDescending(x => x.GetBoxes.OrderBy(y => y.GetShelfLife)
+                .Last().GetShelfLife)
+                .Take(3)
+                .OrderBy(z => z.GetVolume())
+                .ToList();
+            for (int i = 0; i < p_SortPallets.Count; i++)
             {
                 OutputPallet(p_SortPallets[i].GetId, p_SortPallets);
             }
